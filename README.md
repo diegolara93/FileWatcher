@@ -1,0 +1,3 @@
+- Program that watches a given amount of directories on their own virtual thread and converts every file to another given type, like .txt -> .pdf.
+- Each directory is watched on a virtual thread and every file will most likely also be converted on its own virtual thread later.
+- Gonna add other conversions.
