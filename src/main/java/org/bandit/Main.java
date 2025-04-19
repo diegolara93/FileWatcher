@@ -33,6 +33,8 @@ public class Main {
                     document.add(new Paragraph(line));
                 }
                 reader.close();
+                System.out.println("File converted to PDF successfully: " + outputFile);
+                return;
             } catch (Exception e) {
                 if (attempt == maxRetries) {
                     System.err.println("Error converting file to PDF after " + maxRetries + " attempts: " + e.getMessage());
@@ -81,9 +83,8 @@ public class Main {
 
     public static void main(String[] args)  {
         CountDownLatch shutdownLatch = new CountDownLatch(1);
-
-        Consumer<String> fileWatch = (path) -> {
-            Path dir = Paths.get(path);
+        Consumer<ConverterImpl> fileWatch = (converter) -> {
+            Path dir = Paths.get(converter.getInputFile());
             WatchService watcher;
             try {
                 watcher = FileSystems.getDefault().newWatchService();
@@ -91,7 +92,7 @@ public class Main {
                 throw new RuntimeException(e);
             }
             try {
-                dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE);
+                dir.register(watcher, ENTRY_CREATE);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -117,8 +118,18 @@ public class Main {
                     System.out.println(kind.name() + ": " + filename);
 
                     // Handle file conversions and stuff later here
-//                    readFileWithRetry(path + "/" + filename);
-                    convertTextToPdf(path + "/" + filename, path + "/" + "convertedFile" + ".pdf");
+//                    readFileWithRetry(converter + "/" + filename);
+                    // Check file type extension of created file
+                    String extension = filename.toString().substring(filename.toString().lastIndexOf(".") + 1);
+                    switch (extension) {
+                        case "txt" ->  converter = new TextConverter(converter.getInputFile(), converter.getOutputFile(), FileType.TXT);
+                        case "docx" -> converter.setFileType(FileType.DOCX);
+                        case "html" -> converter.setFileType(FileType.HTML);
+                        case "json" -> converter.setFileType(FileType.JSON);
+                        default -> System.out.println("Unsupported file type: " + extension);
+                    }
+                    converter.convertToPdf(converter.getInputFile() + "/" + filename, converter.getOutputFile() + "/" + filename  + ".pdf");
+//                    convertTextToPdf(converter.getInputFile() + "/" + filename, converter.getInputFile() + "/output/" + filename  + ".pdf");
                 }
                 boolean valid = key.reset();
                 if (!valid) {
@@ -128,6 +139,8 @@ public class Main {
         };
         if (args.length == 0) {
             System.out.println("Please provide directories to watch");
+            System.out.println("Usage: <FileConversionType> <DirectoryToWatch> <DirectoryToWatch2>...");
+            System.out.println("Example: pdf src/main/resources src/main/resources2 src/main/resources3");
             return;
         }
         /*
@@ -137,10 +150,35 @@ public class Main {
                 .name("Resource-Watcher", 1);
         List<Thread> threads = new ArrayList<>();
 
-        for (String arg : args) {
-            System.out.println("Watching directory: " + arg);
-            Thread watchThread = builder.start(() -> fileWatch.accept(arg));
-            threads.add(watchThread);
+        for (int i = 0; i < args.length - 1; i++) {
+            FileType fileType = null;
+            if (i == 0) {
+                if (!args[i].equals("pdf") &&
+                        !args[i].equals("txt") &&
+                        !args[i].equals("docx") &&
+                        !args[i].equals("html") &&
+                        !args[i].equals("json"))
+                {
+                    System.out.println("Invalid file conversion type: " + args[i]);
+                    System.out.println("Supported types: pdf, txt, docx, html, json");
+                    return;
+                } else {
+                    switch (args[i].toLowerCase()) {
+                        case "pdf" -> fileType = FileType.PDF;
+                        case "txt" -> fileType = FileType.TXT;
+                        case "docx" -> fileType = FileType.DOCX;
+                        case "html" -> fileType = FileType.HTML;
+                        case "json" -> fileType = FileType.JSON;
+                    }
+                }
+                System.out.println("Converting files to: " + fileType);
+            } else {
+                String arg = args[i];
+                System.out.println("Watching directory: " + arg);
+                ConverterImpl converterInfo = new ConverterImpl(arg, arg + "/output", fileType);
+                Thread watchThread = builder.start(() -> fileWatch.accept(converterInfo));
+                threads.add(watchThread);
+            }
         }
         /*
             Graceful shutdown, add cleanup here if needed later

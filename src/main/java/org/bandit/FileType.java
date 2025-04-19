@@ -25,4 +25,11 @@ public enum FileType {
         }
         throw new IllegalArgumentException("Unknown file type: " + extension);
     }
+
+    @Override
+    public String toString() {
+        return "FileType{" +
+                "extension='" + extension + '\'' +
+                '}';
+    }
 }
