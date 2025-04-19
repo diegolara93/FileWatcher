@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import static java.nio.file.StandardWatchEventKinds.*;
@@ -78,7 +79,9 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args)  {
+        CountDownLatch shutdownLatch = new CountDownLatch(1);
+
         Consumer<String> fileWatch = (path) -> {
             Path dir = Paths.get(path);
             WatchService watcher;
@@ -123,14 +126,13 @@ public class Main {
                 }
             }
         };
-        /*
-            Creates virtual threads that watches the given directories for file changes
-         */
         if (args.length == 0) {
             System.out.println("Please provide directories to watch");
             return;
         }
-
+        /*
+            Creates virtual threads that watches the given directories for file changes
+         */
         Thread.Builder builder = Thread.ofVirtual()
                 .name("Resource-Watcher", 1);
         List<Thread> threads = new ArrayList<>();
@@ -140,10 +142,39 @@ public class Main {
             Thread watchThread = builder.start(() -> fileWatch.accept(arg));
             threads.add(watchThread);
         }
+        /*
+            Graceful shutdown, add cleanup here if needed later
+         */
+        Runtime.getRuntime().addShutdownHook(
+                new Thread(() -> {
+                    System.out.println("Shutting down gracefully...");
+                    for (Thread thread : threads) {
+                        thread.interrupt();
+                        System.out.println(
+                                "Shutting down thread: " + thread.getName()
+                        );
+                    }
+                    shutdownLatch.countDown();
+                })
+        );
 
+        Thread.ofVirtual()
+                .name("sigint‑watcher", 0)
+                .start(() -> {
+                    try {
+                        shutdownLatch.await();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
         for (Thread thread : threads) {
-            thread.join();
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
+
 //        Thread.Builder builder = Thread.ofVirtual();
 //        Thread fileWatchThread = builder.name(
 //                "resources watcher"
