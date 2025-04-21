@@ -122,13 +122,33 @@ public class Main {
                     // Check file type extension of created file
                     String extension = filename.toString().substring(filename.toString().lastIndexOf(".") + 1);
                     switch (extension) {
-                        case "txt" ->  converter = new TextConverter(converter.getInputFile(), converter.getOutputFile(), FileType.TXT);
+                        case "txt" ->  converter = new TextConverter(converter.getInputFile(), converter.getOutputFile(), converter.getFileType());
                         case "docx" -> converter.setFileType(FileType.DOCX);
                         case "html" -> converter.setFileType(FileType.HTML);
                         case "json" -> converter.setFileType(FileType.JSON);
                         default -> System.out.println("Unsupported file type: " + extension);
                     }
-                    converter.convertToPdf(converter.getInputFile() + "/" + filename, converter.getOutputFile() + "/" + filename  + ".pdf");
+                    Thread.Builder builder = Thread.ofVirtual()
+                            .name("File-Converter", 1);
+                    ConverterImpl finalConverter = converter;
+                    String ext = "";
+                    switch (converter.getFileType()) {
+                        case DOCX -> ext = "docx";
+                        case HTML -> ext = "html";
+                        case JSON -> ext = "json";
+                        case PDF -> ext = "pdf";
+                        case TXT -> ext = "txt";
+                    }
+                    String finalExt = ext;
+                    Thread convertThread = builder.start(() ->
+                            finalConverter.convertToDocx(finalConverter.getInputFile() + "/" + filename, finalConverter.getOutputFile() + "/" + filename + "." + finalExt));
+                    try {
+                        System.out.println("New thread spawned for file conversion");
+                        convertThread.join();
+                    } catch (InterruptedException e) {
+                        System.out.println("Thread interrupted");
+                        Thread.currentThread().interrupt();
+                    }
 //                    convertTextToPdf(converter.getInputFile() + "/" + filename, converter.getInputFile() + "/output/" + filename  + ".pdf");
                 }
                 boolean valid = key.reset();
@@ -149,9 +169,8 @@ public class Main {
         Thread.Builder builder = Thread.ofVirtual()
                 .name("Resource-Watcher", 1);
         List<Thread> threads = new ArrayList<>();
-
+        FileType fileType = null;
         for (int i = 0; i < args.length - 1; i++) {
-            FileType fileType = null;
             if (i == 0) {
                 if (!args[i].equals("pdf") &&
                         !args[i].equals("txt") &&

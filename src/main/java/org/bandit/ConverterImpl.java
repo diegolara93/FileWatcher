@@ -1,5 +1,7 @@
 package org.bandit;
 
+import java.util.function.Consumer;
+
 public class ConverterImpl implements Converter {
     private String inputFile;
     private String outputFile;

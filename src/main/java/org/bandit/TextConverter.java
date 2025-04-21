@@ -3,10 +3,11 @@ package org.bandit;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.pdf.PdfWriter;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.*;
 
 public class TextConverter extends ConverterImpl {
     TextConverter(String inputFile, String outputFile, FileType fileType) {
@@ -57,7 +58,29 @@ public class TextConverter extends ConverterImpl {
 
     @Override
     public void convertToDocx(String inputFile, String outputFile) {
+        try {
+            File file = new File(inputFile);
+            FileInputStream fis = new FileInputStream(file);
+            byte[] data = new byte[(int) file.length()];
+            fis.read(data);
+            fis.close();
+            String text = new String(data, "UTF-8");
 
+            XWPFDocument document = new XWPFDocument();
+
+            XWPFParagraph paragraph = document.createParagraph();
+
+            XWPFRun run = paragraph.createRun();
+            run.setText(text);
+
+            FileOutputStream out = new FileOutputStream(outputFile);
+            document.write(out);
+            out.close();
+
+            System.out.println("Text file converted to DOCX successfully");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     @Override
     public void convertToHtml(String inputFile, String outputFile) {
