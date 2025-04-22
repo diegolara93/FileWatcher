@@ -123,7 +123,7 @@ public class Main {
                     String extension = filename.toString().substring(filename.toString().lastIndexOf(".") + 1);
                     switch (extension) {
                         case "txt" ->  converter = new TextConverter(converter.getInputFile(), converter.getOutputFile(), converter.getFileType());
-                        case "docx" -> converter.setFileType(FileType.DOCX);
+                        case "docx" -> converter = new DocxConverter(converter.getInputFile(), converter.getOutputFile(), converter.getFileType());
                         case "html" -> converter.setFileType(FileType.HTML);
                         case "json" -> converter.setFileType(FileType.JSON);
                         default -> System.out.println("Unsupported file type: " + extension);
@@ -141,15 +141,13 @@ public class Main {
                     }
                     String finalExt = ext;
                     Thread convertThread = builder.start(() ->
-                            finalConverter.convertToDocx(finalConverter.getInputFile() + "/" + filename, finalConverter.getOutputFile() + "/" + filename + "." + finalExt));
+                            finalConverter.convertToPdf(finalConverter.getInputFile() + "/" + filename, finalConverter.getOutputFile() + "/" + filename + "." + finalExt));
+//                    convertTextToPdf(converter.getInputFile() + "/" + filename, converter.getInputFile() + "/output/" + filename  + ".pdf");
                     try {
-                        System.out.println("New thread spawned for file conversion");
                         convertThread.join();
                     } catch (InterruptedException e) {
-                        System.out.println("Thread interrupted");
                         Thread.currentThread().interrupt();
                     }
-//                    convertTextToPdf(converter.getInputFile() + "/" + filename, converter.getInputFile() + "/output/" + filename  + ".pdf");
                 }
                 boolean valid = key.reset();
                 if (!valid) {
