@@ -8,6 +8,7 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class TextConverter extends ConverterImpl {
     TextConverter(String inputFile, String outputFile, FileType fileType) {
@@ -64,7 +65,7 @@ public class TextConverter extends ConverterImpl {
             byte[] data = new byte[(int) file.length()];
             fis.read(data);
             fis.close();
-            String text = new String(data, "UTF-8");
+            String text = new String(data, StandardCharsets.UTF_8);
 
             XWPFDocument document = new XWPFDocument();
 
